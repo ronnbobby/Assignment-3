@@ -1,47 +1,74 @@
 import sys
+import heapq
 
-def main():
-    data = sys.stdin.buffer.read().split()
-    idx = 0
-    n = int(data[idx])
-    m = int(data[idx + 1])
-    idx += 2
+input = sys.stdin.readline
 
-    INF = float('inf')
-    dist = [[INF] * (n + 1) for _ in range(n + 1)]
-    for i in range(1, n + 1):
-        dist[i][i] = 0
+n, m = map(int, input().split())
 
-    for _ in range(m):
-        u = int(data[idx])
-        v = int(data[idx + 1])
-        w = int(data[idx + 2])
-        idx += 3
-        dist[u][v] = w  # last edge between a pair overrides earlier ones
+edges = [dict() for _ in range(n)]
 
-    # Floyd-Warshall
-    for k in range(1, n + 1):
-        dk = dist[k]
-        for i in range(1, n + 1):
-            dik = dist[i][k]
-            if dik == INF:
-                continue
-            di = dist[i]
-            for j in range(1, n + 1):
-                nd = dik + dk[j]
-                if nd < di[j]:
-                    di[j] = nd
+for _ in range(m):
+    u, v, w = map(int, input().split())
+    u -= 1
+    v -= 1
+    edges[u][v] = w
 
-    q = int(data[idx])
-    idx += 1
-    out = []
-    for _ in range(q):
-        a = int(data[idx])
-        b = int(data[idx + 1])
-        idx += 2
-        d = dist[a][b]
-        out.append(str(-1 if d == INF else d))
+q = int(input())
 
-    print("\n".join(out))
+queries = []
+sources = {}
 
-main()
+for _ in range(q):
+    a, b = map(int, input().split())
+    a -= 1
+    b -= 1
+
+    queries.append((a, b))
+
+    if a not in sources:
+        sources[a] = set()
+    sources[a].add(b)
+
+graph = [[] for _ in range(n)]
+
+for u in range(n):
+    for v, w in edges[u].items():
+        graph[u].append((v, w))
+
+INF = 10**18
+answers = {}
+
+for start, targets in sources.items():
+
+    dist = [INF] * n
+    dist[start] = 0
+
+    heap = [(0, start)]
+    remaining = len(targets)
+
+    while heap and remaining > 0:
+        d, u = heapq.heappop(heap)
+
+        if d != dist[u]:
+            continue
+
+        if u in targets:
+            remaining -= 1
+            targets.remove(u)
+
+        for v, w in graph[u]:
+            nd = d + w
+
+            if nd < dist[v]:
+                dist[v] = nd
+                heapq.heappush(heap, (nd, v))
+
+    for _, b in [x for x in queries if x[0] == start]:
+        answers[(start, b)] = -1 if dist[b] == INF else dist[b]
+
+out = []
+
+for a, b in queries:
+    out.append(str(answers[(a, b)]))
+
+sys.stdout.write("\n".join(out))
